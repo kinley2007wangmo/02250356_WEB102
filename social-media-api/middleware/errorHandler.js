@@ -1,4 +1,10 @@
+const ErrorResponse = require('../utils/errorResponse');
+
 const errorHandler = (err, req, res, next) => {
+  let eror = { ...err };
+  error.message = err.message;
+
+  
   console.error(err);
 
   res.status(err.statusCode || 500).json({
