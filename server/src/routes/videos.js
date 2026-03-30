@@ -1,10 +1,14 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const videoController = require("../controllers/videoController");
+const videoController = require('../controllers/videoController');
 
-router.get("/", videoController.getAllVideos);
-router.get("/:id", videoController.getVideoById);
-router.post("/", videoController.createVideo);
-router.delete("/:id", videoController.deleteVideo);
+router.get('/', videoController.getAllVideos);
+router.post('/', videoController.createVideo);
+router.get('/:id', videoController.getVideoById);
+router.put('/:id', videoController.updateVideo);
+router.delete('/:id', videoController.deleteVideo);
+router.get('/:id/comments', videoController.getVideoComments);
+router.post('/:id/likes', videoController.likeVideo);
+router.delete('/:id/likes', videoController.unlikeVideo);
 
 module.exports = router;
