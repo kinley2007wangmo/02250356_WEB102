@@ -8,7 +8,7 @@ const getAllComments = (req, res) => {
 // GET comment by ID
 const getCommentById = (req, res) => {
   const commentId = parseInt(req.params.id);
-  const comment = dataStore.comments.find(c => c.id == commentId);
+  const comment = dataStore.comments.find(c => c.id === commentId);
 
   if (!comment) {
     return res.status(404).json({ error: 'Comment not found' });
@@ -25,22 +25,25 @@ const createComment = (req, res) => {
     return res.status(400).json({ error: 'Required fields missing' });
   }
 
-  const userExists = dataStore.users.some(u => u.id === parseInt(userId));
-  const videoExists = dataStore.videos.some(v => v.id === parseInt(videoId));
+  const userIdInt = parseInt(userId);
+  const videoIdInt = parseInt(videoId);
 
-  if (!userExists) {
-    return res.status(400).json({ error: 'User does not exist' });
+  const user = dataStore.users.find(u => u.id === userIdInt);
+  const video = dataStore.videos.find(v => v.id === videoIdInt);
+
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
   }
 
-  if (!videoExists) {
-    return res.status(400).json({ error: 'Video does not exist' });
+  if (!video) {
+    return res.status(404).json({ error: 'Video not found' });
   }
 
   const newComment = {
     id: dataStore.nextIds.comments++,
     text,
-    userId: parseInt(userId),
-    videoId: parseInt(videoId),
+    userId: userIdInt,
+    videoId: videoIdInt,
     createdAt: new Date().toISOString()
   };
 
@@ -49,7 +52,7 @@ const createComment = (req, res) => {
   res.status(201).json(newComment);
 };
 
-// PUT update comment
+// UPDATE comment
 const updateComment = (req, res) => {
   const commentId = parseInt(req.params.id);
   const commentIndex = dataStore.comments.findIndex(c => c.id === commentId);
@@ -82,11 +85,11 @@ const deleteComment = (req, res) => {
   res.status(204).end();
 };
 
-// GET comments of a video
+// GET comments by video
 const getVideoComments = (req, res) => {
   const videoId = parseInt(req.params.id);
+
   const video = dataStore.videos.find(v => v.id === videoId);
-  
   if (!video) {
     return res.status(404).json({ error: 'Video not found' });
   }
@@ -98,14 +101,84 @@ const getVideoComments = (req, res) => {
 // GET comments by user
 const getUserComments = (req, res) => {
   const userId = parseInt(req.params.id);
+
   const user = dataStore.users.find(u => u.id === userId);
-  
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
 
   const comments = dataStore.comments.filter(c => c.userId === userId);
+
   res.status(200).json(comments);
+};
+
+// POST like a comment
+const likeComment = (req, res) => {
+  const commentId = parseInt(req.params.id);
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+
+  const userIdInt = parseInt(userId);
+
+  const comment = dataStore.comments.find(c => c.id === commentId);
+  const user = dataStore.users.find(u => u.id === userIdInt);
+
+  if (!comment) {
+    return res.status(404).json({ error: 'Comment not found' });
+  }
+
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  // Initialize likes array if not exists
+  if (!comment.likes) {
+    comment.likes = [];
+  }
+
+  if (comment.likes.includes(userIdInt)) {
+    return res.status(409).json({ error: 'User already liked this comment' });
+  }
+
+  comment.likes.push(userIdInt);
+
+  res.status(201).json({ message: 'Comment liked successfully' });
+};
+
+
+// DELETE unlike a comment
+const unlikeComment = (req, res) => {
+  const commentId = parseInt(req.params.id);
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+
+  const userIdInt = parseInt(userId);
+
+  const comment = dataStore.comments.find(c => c.id === commentId);
+
+  if (!comment) {
+    return res.status(404).json({ error: 'Comment not found' });
+  }
+
+  if (!comment.likes) {
+    return res.status(404).json({ error: 'No likes found' });
+  }
+
+  const likeIndex = comment.likes.indexOf(userIdInt);
+
+  if (likeIndex === -1) {
+    return res.status(404).json({ error: 'Like not found' });
+  }
+
+  comment.likes.splice(likeIndex, 1);
+
+  res.status(204).end();
 };
 
 module.exports = {
@@ -115,5 +188,7 @@ module.exports = {
   updateComment,
   deleteComment,
   getVideoComments,
-  getUserComments
+  getUserComments,
+  likeComment,
+  unlikeComment
 };
