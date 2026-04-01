@@ -1,8 +1,8 @@
-# Description
+## Description
 
  This project implements a server-side file upload system using Node.js and Express. It allows users to upload files (PDF, JPG, PNG), validates them, stores them on the server, and provides access to the uploaded files.
 
-### Objective
+## Objective
  To build a backend application that can:
 * Receive file uploads
 * Validate file type and size
@@ -10,7 +10,7 @@
 * Serve uploaded files
 * Handle errors properly
 
-### Technologies Used
+## Technologies Used
     Node.js
     Express.js
     Multer
@@ -18,7 +18,7 @@
     Morgan
     Dotenv
 
-### Project Structure
+## Project Structure
     file-upload-server/
     uploads/        # Stores uploaded files
     .env            # Environment variables
@@ -26,7 +26,7 @@
     package.json
     node_modules/
 
-### Installation & Setup
+## Installation & Setup
 1. Clone the repository: 
     git clone <https://github.com/kinley2007wangmo/02250356_WEB102.git>
     
@@ -43,20 +43,20 @@
 4. Run the server:
     node server.js
 
-### Usage
+## Usage
 1. Open browser:
     http://localhost:8000
 
 2. Upload a file using the form.
 
-### API Endpoint
+## API Endpoint
  Upload File
 * URL: /api/upload
 * Method: POST
 * Body: form-data
     * Key: file (File)
 
-### Features
+## Features
 * File upload using Multer
 * Supports PDF, JPG, PNG
 * File size limit: 5MB
@@ -64,21 +64,21 @@
 * Error handling for invalid files
 * Static file serving
 
-###  Error Handling
+##  Error Handling
 * Invalid file type
 * File size exceeds limit
 * No file uploaded
 
-### Access Uploaded Files
+## Access Uploaded Files
 
 Uploaded files can be accessed via:
     http://localhost:8000/uploads/<filename> (eg; Practical_3)
 
-### Testing
+## Testing
 * Tested using browser upload form
 * Verified file storage in uploads/
 * Checked validation and error handling
 
-### Result
+## Result
 
 The system successfully uploads, validates, and stores files while handling errors efficiently.
