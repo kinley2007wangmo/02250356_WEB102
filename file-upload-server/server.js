@@ -9,7 +9,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// ✅ Create uploads folder FIRST
+//  Create uploads folder FIRST
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
