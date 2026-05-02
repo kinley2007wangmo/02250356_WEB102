@@ -1,14 +1,29 @@
 const express = require('express');
-const router = express.Router();
+const router = express.Router(); // Move this line to the top
 const videoController = require('../controllers/videoController');
+const { protect } = require('../middleware/auth');
+const { upload } = require('../middleware/upload');
+
+// Public routes
+
+router.get('/following', protect, videoController.getFollowingVideos);
 
 router.get('/', videoController.getAllVideos);
-router.post('/', videoController.createVideo);
 router.get('/:id', videoController.getVideoById);
-router.put('/:id', videoController.updateVideo);
-router.delete('/:id', videoController.deleteVideo);
 router.get('/:id/comments', videoController.getVideoComments);
-router.post('/:id/likes', videoController.likeVideo);
-router.delete('/:id/likes', videoController.unlikeVideo);
+
+
+// Protected routes 
+router.post('/', protect, upload.fields([
+  { name: 'video', maxCount: 1 }, 
+  { name: 'thumbnail', maxCount: 1 }
+]), videoController.createVideo);
+
+router.put('/:id', protect, videoController.updateVideo);
+router.delete('/:id', protect, videoController.deleteVideo);
+
+// Like/unlike video
+// router.post('/:id/like', protect, videoController.toggleVideoLike);
+// router.delete('/:id/like', protect, videoController.toggleVideoLike);
 
 module.exports = router;
