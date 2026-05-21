@@ -1,67 +1,50 @@
 const formatResponse = (req, res, next) => {
-  const originalJson = res.json; // store original res.json
+    const originalJson = res.json;   // Store the original res.json method
 
-  // override res.json
-  res.json = function (obj) {
-    const acceptHeader = req.headers.accept;
+    res.json = function(obj) {  // Override res.json method
+        const acceptHeader = req.headers.accept;   // Check Accept header
 
-    // if client wants XML
-    if (acceptHeader && acceptHeader.includes("application/xml")) {
+        if (acceptHeader && acceptHeader.includes('application/xml')) {
+            // Convert to XML (simplified example)
+            const convertToXML = (obj) => {
+                let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<response>\n';
 
-      const convertToXml = (obj) => {
-        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<response>\n';
+                for (const key in obj) {
+                    if (Array.isArray(obj[key])) {
+                        xml += `<${key}>\n`;
+                        obj[key].forEach(item => {
+                            xml += `  <item>\n`;
+                            for (const itemKey in item) {
+                                xml += `    <${itemKey}>${item[itemKey]}</${itemKey}>\n`;
+                            }
+                            xml += `  </item>\n`;
+                        });
+                        xml += `</${key}>\n`;
+                    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                        xml += `<${key}>\n`;
+                        for (const nestedKey in obj[key]) {
+                            xml += `  <${nestedKey}>${obj[key][nestedKey]}</${nestedKey}>\n`;
+                        }
+                        xml += `</${key}>\n`;
+                    } else {
+                        xml += `<${key}>${obj[key]}</${key}>\n`;
+                    }
+                }
 
-        for (const key in obj) {
+                xml += '</response>';
+                return xml;
+            };
 
-          // if array
-          if (Array.isArray(obj[key])) {
-            xml += `<${key}>\n`;
-
-            obj[key].forEach(item => {
-              xml += `  <item>\n`;
-
-              for (const itemKey in item) {
-                xml += `    <${itemKey}>${item[itemKey]}</${itemKey}>\n`;
-              }
-
-              xml += `  </item>\n`;
-            });
-
-            xml += `</${key}>\n`;
-
-          }
-
-          // if object
-          else if (typeof obj[key] === "object" && obj[key] !== null) {
-            xml += `<${key}>\n`;
-
-            for (const nestedKey in obj[key]) {
-              xml += `  <${nestedKey}>${obj[key][nestedKey]}</${nestedKey}>\n`;
-            }
-
-            xml += `</${key}>\n`;
-          }
-
-          // normal value
-          else {
-            xml += `<${key}>${obj[key]}</${key}>\n`;
-          }
+            res.set('Content-Type', 'application/xml');  // Set content type to XML
+            // Call the original send method with XML
+            return res.send(convertToXML(obj));
+        } else {
+            res.set('Content-Type', 'application/json');   // Default to JSON
+            return originalJson.call(this, obj);   // Call the original json method
         }
+    };
 
-        xml += `</response>`;
-        return xml;
-      };
-
-      res.set("Content-Type", "application/xml");
-      return res.send(convertToXml(obj));
-    }
-
-    // default JSON
-    res.set("Content-Type", "application/json");
-    return originalJson.call(this, obj);
-  };
-
-  next();
+    next();
 };
 
 module.exports = formatResponse;
