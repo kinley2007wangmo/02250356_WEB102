@@ -69,10 +69,12 @@ exports.getUserById = async (req, res) => {
 
 exports.registerUser = async (req, res) => {
   try {
-    // Extract user data
     const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
     
-    // Check if user already exists
     const userExists = await prisma.user.findFirst({
       where: {
         OR: [
@@ -90,11 +92,9 @@ exports.registerUser = async (req, res) => {
       });
     }
     
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     
-    // Create user
     const newUser = await prisma.user.create({
       data: {
         username,
@@ -103,7 +103,6 @@ exports.registerUser = async (req, res) => {
       }
     });
     
-    // Return success without password
     const { password: _, ...userWithoutPassword } = newUser;
     
     res.status(201).json({
@@ -120,7 +119,6 @@ exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // Check if user exists
     const user = await prisma.user.findUnique({
       where: { email }
     });
@@ -129,21 +127,18 @@ exports.loginUser = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
-    // Generate JWT token
     const token = jwt.sign(
       { id: user.id },
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
     
-    // Return user without password
     const { password: _, ...userWithoutPassword } = user;
     
     return res.status(200).json({
@@ -156,28 +151,25 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// Get videos by user with cursor-based pagination
 exports.getUserVideos = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { id } = req.params;
     const { cursor, limit = 10 } = req.query;
     const limitNum = parseInt(limit) || 10;
     
-    // Check if user exists
     const userExists = await prisma.user.findUnique({
-      where: { id: parseInt(userId) },
+      where: { id: parseInt(id) },
     });
     
     if (!userExists) {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Build query options
     const queryOptions = {
       where: {
-        userId: parseInt(userId),
+        userId: parseInt(id),
       },
-      take: limitNum + 1, // Take one extra to determine if there are more items
+      take: limitNum + 1,
       orderBy: {
         createdAt: 'desc',
       },
@@ -199,26 +191,21 @@ exports.getUserVideos = async (req, res) => {
       }
     };
     
-    // If cursor is provided, filter records after the cursor
     if (cursor) {
       queryOptions.cursor = {
         id: parseInt(cursor),
       };
-      queryOptions.skip = 1; // Skip the cursor itself
+      queryOptions.skip = 1;
     }
     
-    // Get user's videos
     const videos = await prisma.video.findMany(queryOptions);
     
-    // Check if there are more items
     const hasNextPage = videos.length > limitNum;
     
-    // Remove the extra item we used to check for more data
     if (hasNextPage) {
       videos.pop();
     }
     
-    // Format videos
     const formattedVideos = videos.map(video => ({
       ...video,
       likeCount: video._count.likes,
@@ -226,7 +213,6 @@ exports.getUserVideos = async (req, res) => {
       _count: undefined,
     }));
     
-    // Get the next cursor from the last item
     const nextCursor = hasNextPage ? formattedVideos[formattedVideos.length - 1].id.toString() : null;
     
     res.status(200).json({
@@ -237,7 +223,7 @@ exports.getUserVideos = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(`Error getting videos for user ${req.params.userId}:`, error);
+    console.error(`Error getting videos for user ${req.params.id}:`, error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -246,34 +232,25 @@ exports.getUserVideos = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    // Log what's being received
-    console.log('Update user request body:', req.body);
-    console.log('Update user request files:', req.files);
-    
-    // Extract form data
     const { name, bio } = req.body;
     let avatarPath = null;
     
-    // Handle avatar file if uploaded
     if (req.files && req.files.avatar) {
       const avatarFile = req.files.avatar[0];
       avatarPath = `/uploads/${avatarFile.filename}`;
     }
     
-    // Build update data object
     const updateData = {
       ...(name && { name }),
       ...(bio && { bio }),
       ...(avatarPath && { avatar: avatarPath }),
     };
     
-    // Update user in database
     const updatedUser = await prisma.user.update({
       where: { id: parseInt(id) },
       data: updateData,
     });
     
-    // Remove password from response
     const { password, ...userWithoutPassword } = updatedUser;
     
     res.status(200).json(userWithoutPassword);
@@ -288,7 +265,6 @@ exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Check if user exists
     const user = await prisma.user.findUnique({
       where: { id: parseInt(id) }
     });
@@ -297,7 +273,6 @@ exports.deleteUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Delete user
     await prisma.user.delete({
       where: { id: parseInt(id) }
     });
@@ -306,41 +281,6 @@ exports.deleteUser = async (req, res) => {
   } catch (error) {
     console.error(`Error deleting user ${req.params.id}:`, error);
     res.status(500).json({ message: 'Failed to delete user' });
-  }
-};
-
-// Get user videos
-exports.getUserVideos = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const videos = await prisma.video.findMany({
-      where: { userId: parseInt(id) },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            avatar: true
-          }
-        },
-        _count: {
-          select: {
-            likes: true,
-            comments: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    
-    res.status(200).json(videos);
-  } catch (error) {
-    console.error(`Error fetching videos for user ${req.params.id}:`, error);
-    res.status(500).json({ message: 'Failed to fetch user videos' });
   }
 };
 
@@ -400,19 +340,29 @@ exports.getUserFollowing = async (req, res) => {
   }
 };
 
+// Follow user
 exports.followUser = async (req, res) => {
   try {
-    const { id } = req.params; // User to follow
-    const currentUserId = req.user.id; // Current user
-    
-    console.log(`User ${currentUserId} is trying to follow user ${id}`);
-    
-    // Prevent following yourself
+    const { id } = req.params;
+    const currentUserId = parseInt(req.user.id); // ← fixed
+
     if (parseInt(id) === currentUserId) {
       return res.status(400).json({ message: 'You cannot follow yourself' });
     }
+
+    const existingFollow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentUserId,
+          followingId: parseInt(id)
+        }
+      }
+    });
+
+    if (existingFollow) {
+      return res.status(400).json({ message: 'Already following this user' });
+    }
     
-    // Create follow relationship
     await prisma.follow.create({
       data: {
         followerId: currentUserId,
@@ -420,11 +370,8 @@ exports.followUser = async (req, res) => {
       }
     });
     
-    // Get updated follower count
     const followerCount = await prisma.follow.count({
-      where: {
-        followingId: parseInt(id)
-      }
+      where: { followingId: parseInt(id) }
     });
     
     res.status(200).json({ 
@@ -437,14 +384,12 @@ exports.followUser = async (req, res) => {
   }
 };
 
+// Unfollow user
 exports.unfollowUser = async (req, res) => {
   try {
-    const { id } = req.params; // User to unfollow
-    const currentUserId = req.user.id; // Current user
+    const { id } = req.params;
+    const currentUserId = parseInt(req.user.id); // ← fixed
     
-    console.log(`User ${currentUserId} is trying to unfollow user ${id}`);
-    
-    // Delete follow relationship
     await prisma.follow.delete({
       where: {
         followerId_followingId: {
@@ -454,11 +399,8 @@ exports.unfollowUser = async (req, res) => {
       }
     });
     
-    // Get updated follower count
     const followerCount = await prisma.follow.count({
-      where: {
-        followingId: parseInt(id)
-      }
+      where: { followingId: parseInt(id) }
     });
     
     res.status(200).json({ 
